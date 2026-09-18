@@ -1,0 +1,42 @@
+# Dependabot configuration.
+#
+# The commit-message prefixes matter beyond tidiness: release-please builds the version bump and
+# the CHANGELOG from conventional-commit messages, and commitlint.config.mjs enforces the format on
+# every PR. Dependabot's default subject ("Bump X from A to B") is not conventional, so without a
+# prefix here the bot's own pull requests would fail this repository's own lint and its updates
+# would be missing from the release notes.
+version: 2
+updates:
+  # NuGet package updates.
+  #
+  # Unlike the core repository there are no `ignore` entries here: this package has no source
+  # generator, so nothing in its dependency graph is a compiler-compatibility floor. The one
+  # reference to watch by hand is OoplesFinance.StockIndicators itself - it is a minimum, not a
+  # pin, and raising it is a decision about which core version consumers are forced onto.
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "nuget"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  # GitHub Actions updates. The workflows pin actions to a commit SHA, which is the safe way to use
+  # a third-party action but also freezes it - nothing tells you an update exists. Dependabot is
+  # what keeps those pins moving, so this ecosystem is required, not optional.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"

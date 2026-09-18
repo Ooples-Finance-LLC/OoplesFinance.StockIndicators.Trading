@@ -1,0 +1,57 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ "master" ]
+  schedule:
+    - cron: '37 5 * * 3'
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'csharp' ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v7
+      with:
+        # The build below compiles repository-controlled MSBuild inputs. Leaving the checkout
+        # token in .git/config makes it reachable from any of that, and nothing after this step
+        # performs a git operation, so there is nothing to persist it for.
+        persist-credentials: false
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: |
+          8.x
+          10.x
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v4
+      with:
+        languages: ${{ matrix.language }}
+
+    # Built explicitly rather than by autobuild. Autobuild walks the whole repository and picks a
+    # build method by guesswork; naming the project is both faster and unambiguous about what is
+    # actually analysed. net10.0 alone is enough - the sources are shared across every target, so
+    # building all three would analyse the same code three times.
+    - name: Build for analysis
+      run: dotnet build src/OoplesFinance.StockIndicators.Trading.csproj --configuration Release --framework net10.0
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v4
+      with:
+        category: "/language:${{matrix.language}}"

@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+
+    <!-- The assembly name is what the Trading project's InternalsVisibleTo names, so the mapping
+         tests can reach AlpacaBroker.RawAlpacaAccount. Renaming this without changing that
+         attribute turns those tests into compile errors. -->
+    <AssemblyName>OoplesFinance.StockIndicators.Trading.Tests.Unit</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\OoplesFinance.StockIndicators.Trading.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <!-- The integration tests talk to the live Alpaca paper-trading API and skip themselves when no
+         credentials are configured, which is what Skip.If/Skip.IfNot need. Without this package a
+         clean checkout fails every one of them instead of skipping. -->
+    <PackageReference Include="Xunit.SkippableFact" Version="1.5.85" />
+    <PackageReference Include="coverlet.collector" Version="10.0.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

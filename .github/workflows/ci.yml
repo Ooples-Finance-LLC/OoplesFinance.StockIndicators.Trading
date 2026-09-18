@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  # Builds on the OLDEST supported .NET 10 SDK, which the main job never does.
+  #
+  # `dotnet-version: 10.x` resolves to the NEWEST 10.x SDK, so a change that raises a toolchain
+  # floor stays green there and fails only on someone else's machine. This repository has no source
+  # generator of its own - the reason the core repository needs this job - but it still resolves a
+  # dependency graph that can raise the floor underneath it, and the job costs well under a minute.
+  #
+  # 10.0.1xx is the first .NET 10 feature band. Raise it only as a deliberate decision to drop
+  # support for older SDKs, and say so in the commit.
+  minimum-sdk:
+    name: Build on the oldest supported SDK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup the oldest supported .NET 10 SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.1xx
+
+      - name: Report the SDK actually in use
+        run: dotnet --version
+
+      - name: Build the library
+        run: dotnet build src/OoplesFinance.StockIndicators.Trading.csproj --configuration Release --framework net10.0
+
+  build-and-test:
+    # windows-latest: net461 needs the .NET Framework reference assemblies.
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          # dotnet build/test below run repository-controlled MSBuild inputs; the checkout token
+          # has no reader after this step, so it should not be left in .git/config.
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.x
+            10.x
+
+      - name: Restore dependencies
+        run: dotnet restore src/OoplesFinance.StockIndicators.Trading.csproj
+
+      - name: Build for .NET 10
+        run: dotnet build src/OoplesFinance.StockIndicators.Trading.csproj --no-restore --configuration Release --framework net10.0
+
+      - name: Build for .NET 8
+        run: dotnet build src/OoplesFinance.StockIndicators.Trading.csproj --no-restore --configuration Release --framework net8.0
+
+      - name: Build for .NET Framework 4.6.1
+        run: dotnet build src/OoplesFinance.StockIndicators.Trading.csproj --no-restore --configuration Release --framework net461
+
+      - name: Restore test dependencies
+        run: dotnet restore tests/OoplesFinance.StockIndicators.Trading.Tests.Unit.csproj
+
+      # The integration tests talk to the live Alpaca paper-trading API and skip themselves when
+      # ALPACA_API_KEY / ALPACA_API_SECRET are absent, so a fork PR with no secrets is green rather
+      # than red for a reason unrelated to the change. Configure those secrets to run them for real.
+      - name: Build and run tests
+        env:
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
+        run: dotnet test tests/OoplesFinance.StockIndicators.Trading.Tests.Unit.csproj --configuration Release --framework net10.0 --verbosity normal --logger trx --results-directory ./test-results
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-results
+          path: ./test-results

@@ -1,0 +1,125 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net8.0;net461</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- The namespaces stay OoplesFinance.StockIndicators.Builder.*, so a consumer that moves from
+         the core package to this one edits a package reference and no `using` at all. -->
+    <RootNamespace>OoplesFinance.StockIndicators</RootNamespace>
+    <AssemblyName>OoplesFinance.StockIndicators.Trading</AssemblyName>
+    <NeutralLanguage>en-US</NeutralLanguage>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>OoplesFinance.StockIndicators.Trading</PackageId>
+    <Title>Ooples Finance Stock Indicators - Trading</Title>
+    <Description>
+      Broker and live market data adapters for OoplesFinance.StockIndicators. Kept out of the core
+      package so that computing an indicator does not require a broker SDK.
+    </Description>
+    <Authors>ooples</Authors>
+    <Company>Ooples Finance</Company>
+    <Copyright>Ooples Finance LLC</Copyright>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+    <PackageProjectUrl>https://github.com/Ooples-Finance-LLC/OoplesFinance.StockIndicators.Trading</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Ooples-Finance-LLC/OoplesFinance.StockIndicators.Trading</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReleaseNotes>https://github.com/Ooples-Finance-LLC/OoplesFinance.StockIndicators.Trading/releases</PackageReleaseNotes>
+    <PackageTags>stock;indicators;trading;alpaca;broker;market-data;paper-trading;finance</PackageTags>
+    <PackageIcon>Favicon.jpg</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <!-- Seeded at 0.0.0 so release-please owns every version this package has ever had. The initial
+         commit carries `Release-As: 1.0.0`, so the first Release PR cuts 1.0.0 rather than skipping
+         it - seeding at 1.0.0 instead would make the first published version 1.0.1 or 1.1.0. -->
+    <Version>0.0.0</Version> <!-- x-release-please-version -->
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+    <Optimize>False</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <!-- Warnings are errors on the same targets the core project enforces them on. Lowering this to
+       get a first build green would hide exactly the kind of nullability warning that later fails
+       in CI on a machine that does enforce it. -->
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0|AnyCPU'">
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0|AnyCPU'">
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net461|AnyCPU'">
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net461|AnyCPU'">
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The core library, consumed as a published package rather than a project on disk: the two
+         repositories version independently, so this is a floor ("2.0.0 or newer"), not a pin.
+         2.0.0 is NOT an arbitrary floor and must not be lowered. Core 1.1.0 - the newest version
+         published today - still contains AlpacaBroker and AlpacaMarketDataProvider itself, so
+         building these files against it defines each type twice and the compiler says so (CS0436).
+         Note that CS0436 is a WARNING: without TreatWarningsAsErrors the build "succeeds" and
+         produces an assembly whose type resolution is ambiguous, which is how this would reach a
+         consumer unnoticed.
+         The floor is therefore the first core release that has REMOVED them, which is the breaking
+         release cut from the core repository's removal PR. That release does not exist yet; 2.0.0
+         is what a `refactor!:` bump from 1.1.0 produces, and it must be reconciled with whatever
+         core actually publishes before this package is released. -->
+    <PackageReference Include="OoplesFinance.StockIndicators" Version="2.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- AlpacaBroker.RawAlpacaAccount is the wire shape of the account response and stays internal;
+         the mapping tests assert against it directly. The attribute is per-assembly, so it names
+         THIS repository's test assembly rather than the core one it used to live beside. -->
+    <InternalsVisibleTo Include="OoplesFinance.StockIndicators.Trading.Tests.Unit" />
+  </ItemGroup>
+
+  <!--
+    The reason this package exists. Alpaca.Markets is a broker SDK, and only these adapters need it -
+    everything else in the library computes indicators. Carrying it in the core package meant anyone
+    who wanted an RSI also restored a trading API client and its transitive dependencies.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Alpaca.Markets" Version="7.2.0" />
+    <PackageReference Include="Alpaca.Markets.Extensions" Version="7.2.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)'=='net461'">
+    <!-- Same pairing as the core project: System.Memory and System.Text.Json both require
+         System.Buffers >= 4.6.1 on this target, and taking only one half is a fatal NU1605 where
+         warnings are errors. System.Text.Json is not in-box on net461 and AlpacaBroker uses it. -->
+    <PackageReference Include="System.Memory" Version="4.6.3" />
+    <PackageReference Include="System.Buffers" Version="4.6.1" />
+    <PackageReference Include="System.Text.Json" Version="10.0.12" />
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="Images\Favicon.jpg">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
